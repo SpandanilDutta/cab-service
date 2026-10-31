@@ -1,0 +1,32 @@
+spring:
+  application:
+    name: cab-service-api
+
+
+  jpa:
+    hibernate:
+      ddl-auto: update    # schema is owned by Flyway, not Hibernate auto-generation
+    properties:
+      hibernate:
+        format_sql: true
+    open-in-view: false
+
+
+  profiles:
+    active: local
+
+server:
+  port: 8080
+
+# App-specific constants referenced across modules — keep tunable values out of code
+cabservice:
+  matching:
+    radius-km: 1.0
+  trip:
+    accept-lock-ttl-seconds: 30
+  otp:
+    ttl-seconds: 600
+    max-attempts: 3
+    max-regenerations: 3
+  location:
+    last-known-ttl-seconds: 60

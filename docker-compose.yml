@@ -1,0 +1,71 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:18
+    container_name: cab-postgres
+    environment:
+      POSTGRES_DB: cabservice
+      POSTGRES_USER: cabservice
+      POSTGRES_PASSWORD: cabservice
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cabservice"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7
+    container_name: cab-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # api: builds from ./ (this module) — handles HTTP + WebSocket, owns the matching/trip/OTP/payment logic
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cab-api
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/cabservice
+      SPRING_DATASOURCE_USERNAME: cabservice
+      SPRING_DATASOURCE_PASSWORD: cabservice
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+    ports:
+      - "8080:8080"
+
+  # worker: separate deployable — polls outbox_events (FOR UPDATE SKIP LOCKED) and publishes to Redis
+  worker:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    container_name: cab-worker
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/cabservice
+      SPRING_DATASOURCE_USERNAME: cabservice
+      SPRING_DATASOURCE_PASSWORD: cabservice
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+
+volumes:
+  pg_data:
