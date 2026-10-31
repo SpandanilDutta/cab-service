@@ -8,6 +8,8 @@ target/
 # Local config with real passwords
 src/main/resources/application-local.yml
 
+worker/src/main/resources/application-local.yml
+
 # Logs and OS junk
 *.log
 .DS_Store

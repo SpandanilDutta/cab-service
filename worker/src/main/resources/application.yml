@@ -7,10 +7,16 @@ spring:
     username: ${SPRING_DATASOURCE_USERNAME:cabservice}
     password: ${SPRING_DATASOURCE_PASSWORD:cabservice}
 
-  jpa:
-    hibernate:
-      ddl-auto: validate   # worker never owns schema changes — Flyway in the API module does
-    open-in-view: false
+  spring:
+    jpa:
+      hibernate:
+        ddl-auto: validate
+      open-in-view: false
+      properties:
+        hibernate:
+          format_sql: true
+          jdbc:
+            time_zone: UTC
 
   data:
     redis:
