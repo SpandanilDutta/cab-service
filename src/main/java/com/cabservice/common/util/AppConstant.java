@@ -18,4 +18,10 @@ public class AppConstant {
         NREGA_JOB_CARD,
         OTHER
     }
+
+    public enum AccountStatus {
+        ACTIVE,
+        INACTIVE,
+        SUSPENDED
+    }
 }

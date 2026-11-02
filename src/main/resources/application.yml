@@ -34,3 +34,11 @@ cabservice:
     max-regenerations: 3
   location:
     last-known-ttl-seconds: 60
+  auth:
+    jwt:
+      access-token-minutes: 15
+      refresh-token-days: 7
+    registration:
+      otp-ttl-minutes: 10
+      max-verify-attempts: 5
+      max-sends-per-hour: 5

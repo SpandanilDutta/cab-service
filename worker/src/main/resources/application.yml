@@ -2,26 +2,44 @@ spring:
   application:
     name: cab-service-worker
 
-  datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/cabservice}
-    username: ${SPRING_DATASOURCE_USERNAME:cabservice}
-    password: ${SPRING_DATASOURCE_PASSWORD:cabservice}
 
-  spring:
-    jpa:
+  rabbitmq:
+    host: ${SPRING_RABBITMQ_HOST:localhost}
+    port: ${SPRING_RABBITMQ_PORT:5672}
+    username: ${SPRING_RABBITMQ_USERNAME:cabservice}
+    password: ${SPRING_RABBITMQ_PASSWORD:cabservice}
+    listener:
+      simple:
+        # If sending fails, do NOT put the message back in the queue forever (a poison message
+        # would loop endlessly). For OTP emails a dropped message is fine: the user taps "resend".
+        default-requeue-rejected: false
+
+    # Local default: Mailpit from docker-compose (fake SMTP server, inbox at http://localhost:8025).
+    # For a real provider, set SPRING_MAIL_HOST, SPRING_MAIL_PORT, SPRING_MAIL_USERNAME,
+    # SPRING_MAIL_PASSWORD (and the smtp auth/starttls properties) as environment variables.
+    mail:
+      host: ${SPRING_MAIL_HOST:localhost}
+      port: ${SPRING_MAIL_PORT:1025}
+
+
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
       hibernate:
-        ddl-auto: validate
-      open-in-view: false
-      properties:
-        hibernate:
-          format_sql: true
-          jdbc:
-            time_zone: UTC
+        format_sql: true
+        jdbc:
+          time_zone: UTC
 
   data:
     redis:
       host: ${SPRING_DATA_REDIS_HOST:localhost}
       port: ${SPRING_DATA_REDIS_PORT:6379}
+
+  profiles:
+    active: local
 
 server:
   port: 8081
@@ -30,3 +48,6 @@ cabservice:
   outbox:
     poll-fixed-delay-ms: 1000
     batch-size: 50
+
+  mail:
+    from: no-reply@cabservice.local

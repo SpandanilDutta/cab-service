@@ -15,31 +15,42 @@
     <artifactId>cab-service-worker</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>cab-service-worker</name>
-    <description>Polls outbox_events (FOR UPDATE SKIP LOCKED) and publishes to Redis. Scales independently of the API by notification volume, not request traffic.</description>
+    <description>Background worker: consumes RabbitMQ jobs (OTP emails) and, later, polls the outbox table. Scales independently of the API.</description>
 
     <properties>
         <java.version>21</java.version>
     </properties>
 
     <dependencies>
+        <!-- RabbitMQ consumer -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-jpa</artifactId>
+            <artifactId>spring-boot-starter-amqp</artifactId>
         </dependency>
-        <dependency>
-            <groupId>org.postgresql</groupId>
-            <artifactId>postgresql</artifactId>
-            <scope>runtime</scope>
-        </dependency>
+
+        <!-- JSON converter for RabbitMQ messages -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-redis</artifactId>
+            <artifactId>spring-boot-starter-json</artifactId>
         </dependency>
+
+        <!-- Sending email -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+
+        <!--
+            Add these back when you write the outbox poller (it reads PostgreSQL / Redis):
+            spring-boot-starter-data-jpa, org.postgresql:postgresql, spring-boot-starter-data-redis
+        -->
+
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <optional>true</optional>
         </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
@@ -52,6 +63,14 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <excludes>
+                        <exclude>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                        </exclude>
+                    </excludes>
+                </configuration>
             </plugin>
         </plugins>
     </build>

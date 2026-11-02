@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   postgres:
     image: postgres:18
@@ -9,7 +7,7 @@ services:
       POSTGRES_USER: cabservice
       POSTGRES_PASSWORD: cabservice
     ports:
-      - "5432:5432"
+      - "5433:5432"   # 5433 on your PC, so it does not clash with the Postgres you installed
     volumes:
       - pg_data:/var/lib/postgresql
     healthcheck:
@@ -29,7 +27,29 @@ services:
       timeout: 5s
       retries: 5
 
-  # api: builds from ./ (this module) — handles HTTP + WebSocket, owns the matching/trip/OTP/payment logic
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: cab-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: cabservice
+      RABBITMQ_DEFAULT_PASS: cabservice
+    ports:
+      - "5672:5672"     # app connections
+      - "15672:15672"   # management UI -> http://localhost:15672 (cabservice / cabservice)
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # A fake mail server for development: catches every email the worker sends.
+  mailpit:
+    image: axllent/mailpit
+    container_name: cab-mailpit
+    ports:
+      - "1025:1025"   # SMTP (the worker sends here)
+      - "8025:8025"   # inbox in your browser -> http://localhost:8025
+
   api:
     build:
       context: .
@@ -40,32 +60,39 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/cabservice
       SPRING_DATASOURCE_USERNAME: cabservice
       SPRING_DATASOURCE_PASSWORD: cabservice
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: cabservice
+      SPRING_RABBITMQ_PASSWORD: cabservice
     ports:
-      - "8080:8080"
+      - "8090:8080"
 
-  # worker: separate deployable — polls outbox_events (FOR UPDATE SKIP LOCKED) and publishes to Redis
+  # Separate deployable: consumes RabbitMQ jobs (OTP emails now, outbox events later)
   worker:
     build:
       context: ./worker
       dockerfile: Dockerfile
     container_name: cab-worker
     depends_on:
-      postgres:
+      rabbitmq:
         condition: service_healthy
-      redis:
-        condition: service_healthy
+      mailpit:
+        condition: service_started
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/cabservice
-      SPRING_DATASOURCE_USERNAME: cabservice
-      SPRING_DATASOURCE_PASSWORD: cabservice
-      SPRING_DATA_REDIS_HOST: redis
-      SPRING_DATA_REDIS_PORT: 6379
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: cabservice
+      SPRING_RABBITMQ_PASSWORD: cabservice
+      SPRING_MAIL_HOST: mailpit
+      SPRING_MAIL_PORT: 1025
 
 volumes:
   pg_data:

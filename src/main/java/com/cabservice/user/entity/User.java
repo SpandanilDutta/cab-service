@@ -11,9 +11,11 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.experimental.SuperBuilder;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -27,6 +29,7 @@ import java.util.Set;
 @Table(name = "users")
 @Getter
 @Setter
+@SuperBuilder
 @NoArgsConstructor
 public class User extends BaseEntity {
 
@@ -42,6 +45,11 @@ public class User extends BaseEntity {
     // bcrypt/argon2 hash, never the raw password
     @Column(name = "password_hash", nullable = false, length = 255)
     private String passwordHash;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "account_status", nullable = false, length = 20)
+    @Builder.Default
+    private AppConstant.AccountStatus accountStatus = AppConstant.AccountStatus.ACTIVE;
 
     // Hibernate creates user_roles(user_id, role) with a composite primary key
     // on both columns, so the same role cannot be assigned to a person twice.
